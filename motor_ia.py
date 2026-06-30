@@ -68,7 +68,7 @@ if comando:
         
     else:
         st.session_state.historico.append({"role": "user", "content": comando})
-        motor_selecionado = "llama-3.1-8b-instant"
+        motor_selecionado = "llama-3.2-11b-vision-instruct"
 
     # 7. A Sinapse
     with st.spinner(f"Processando via {motor_selecionado}..."):
