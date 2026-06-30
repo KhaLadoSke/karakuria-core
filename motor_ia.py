@@ -50,23 +50,25 @@ if comando:
     with st.chat_message("user"):
         st.markdown(comando)
 
-    # 6. O Roteamento de Dados (Texto vs. Imagem)
+   # 6. O Roteamento de Dados (Texto vs. Imagem)
     if imagem_anexada:
-        # A Mágica de Infraestrutura: Convertendo a imagem para texto (Base64)
+        # Extraímos os bytes e convertemos para Base64
         bytes_imagem = imagem_anexada.getvalue()
         imagem_base64 = base64.b64encode(bytes_imagem).decode('utf-8')
         
-        # O pacote de visão exige uma estrutura de listas específica
+        # Lemos dinamicamente se é PNG, JPEG, etc. (O pulo do gato!)
+        tipo_arquivo = imagem_anexada.type 
+        
+        # Montamos o pacote com o tipo de arquivo correto
         conteudo_usuario = [
             {"type": "text", "text": comando},
             {
                 "type": "image_url",
-                "image_url": {"url": f"data:image/jpeg;base64,{imagem_base64}"}
+                "image_url": {"url": f"data:{tipo_arquivo};base64,{imagem_base64}"}
             }
         ]
         
         st.session_state.historico.append({"role": "user", "content": conteudo_usuario})
-        # Acionamos o cérebro de visão computacional da Meta
         motor_selecionado = "llama-3.2-11b-vision-preview" 
         
     else:
