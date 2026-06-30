@@ -14,6 +14,13 @@ load_dotenv()
 chave_secreta = os.getenv("GROQ_API_KEY")
 if chave_secreta:
     cliente = Groq(api_key=chave_secreta.strip())
+    # --- DEBUG: LISTAGEM DE MODELOS ---
+lista_modelos = cliente.models.list()
+print("--- MODELOS DISPONÍVEIS NA GROQ ---")
+for m in lista_modelos.data:
+    if "vision" in m.id:
+        print(f"ENCONTRADO: {m.id}")
+# ----------------------------------
 else:
     st.error("Erro crítico: Chave de API não encontrada.")
     st.stop()
@@ -68,7 +75,7 @@ if comando:
         
     else:
         st.session_state.historico.append({"role": "user", "content": comando})
-        motor_selecionado = "llama-3.2-11b-vision-instruct"
+        motor_selecionado = "llama-3.2-90b-vision-preview"
 
     # 7. A Sinapse
     with st.spinner(f"Processando via {motor_selecionado}..."):
