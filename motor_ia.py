@@ -1,12 +1,13 @@
 import os
+import base64
 import streamlit as st
 from dotenv import load_dotenv
 from groq import Groq
 
-# 1. Configuração da Página Web (Aba do Navegador)
+# 1. Configuração da Página Web
 st.set_page_config(page_title="Karakuria AI", page_icon="🤖", layout="centered")
-st.title("⚡ Karakuria Core")
-st.caption("Sistema de Inteligência e Infraestrutura Operante")
+st.title("⚡ Karakuria Core v2.0")
+st.caption("Sistema de Inteligência e Infraestrutura Operante (Módulo de Visão Ativo)")
 
 # 2. Conexão com o Cofre e o Motor
 load_dotenv()
@@ -15,37 +16,68 @@ if chave_secreta:
     cliente = Groq(api_key=chave_secreta.strip())
 else:
     st.error("Erro crítico: Chave de API não encontrada.")
-    st.stop() # Para a execução do site
+    st.stop()
 
-# 3. Gerenciamento da Memória no Servidor (Session State)
-# Se a memória estiver vazia, criamos a lista e adicionamos a regra do sistema
+# 3. Gerenciamento da Memória no Servidor
 if "historico" not in st.session_state:
     st.session_state.historico = [
-        {"role": "system", "content": "Você é a Karakuria, uma assistente de infraestrutura e dados irônica, direta e altamente inteligente."}
+        {"role": "system", "content": "Você é a Karakuria, uma assistente de infraestrutura e dados irônica, direta e altamente inteligente. Você também consegue ler e diagnosticar imagens."}
     ]
 
-# 4. Renderização da Interface (Desenhando o chat na tela)
-# O Streamlit lê o histórico e desenha os balões de conversa
+# 4. Renderização do Histórico (Desenhando o chat na tela)
 for mensagem in st.session_state.historico:
-    if mensagem["role"] != "system": # Escondemos a regra do sistema da tela
+    if mensagem["role"] != "system":
         with st.chat_message(mensagem["role"]):
-            st.markdown(mensagem["content"])
+            # Lógica para renderizar corretamente se houver imagem no histórico
+            if isinstance(mensagem["content"], list):
+                st.markdown(mensagem["content"][0]["text"])
+                st.caption("📎 [Imagem processada nos logs]")
+            else:
+                st.markdown(mensagem["content"])
 
-# 5. O Input do Usuário (A caixa de texto lá embaixo)
-comando = st.chat_input("Fale com a Karakuria...")
+# 5. Interface de Input Híbrida (Texto + Upload)
+# Colocamos o uploader na barra lateral (sidebar) para ficar mais organizado
+with st.sidebar:
+    st.header("Módulo de Sensores")
+    imagem_anexada = st.file_uploader("Carregar captura de tela/log", type=["png", "jpg", "jpeg"])
+    if imagem_anexada:
+        st.image(imagem_anexada, caption="Pronto para análise.")
+
+comando = st.chat_input("Fale com a Karakuria ou envie uma imagem...")
 
 if comando:
-    # Mostra a mensagem do usuário na tela imediatamente
+    # Mostra a mensagem do usuário na tela
     with st.chat_message("user"):
         st.markdown(comando)
-    
-    # Salva na memória do servidor
-    st.session_state.historico.append({"role": "user", "content": comando})
-    
-    # 6. A Sinapse (Chamada para a Groq)
-    with st.spinner("Processando dados..."):
+
+    # 6. O Roteamento de Dados (Texto vs. Imagem)
+    if imagem_anexada:
+        # A Mágica de Infraestrutura: Convertendo a imagem para texto (Base64)
+        bytes_imagem = imagem_anexada.getvalue()
+        imagem_base64 = base64.b64encode(bytes_imagem).decode('utf-8')
+        
+        # O pacote de visão exige uma estrutura de listas específica
+        conteudo_usuario = [
+            {"type": "text", "text": comando},
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{imagem_base64}"}
+            }
+        ]
+        
+        st.session_state.historico.append({"role": "user", "content": conteudo_usuario})
+        # Acionamos o cérebro de visão computacional da Meta
+        motor_selecionado = "llama-3.2-11b-vision-preview" 
+        
+    else:
+        # Modo texto puro e rápido
+        st.session_state.historico.append({"role": "user", "content": comando})
+        motor_selecionado = "llama-3.1-8b-instant"
+
+    # 7. A Sinapse
+    with st.spinner(f"Processando via {motor_selecionado}..."):
         resposta = cliente.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model=motor_selecionado,
             messages=st.session_state.historico
         )
         
