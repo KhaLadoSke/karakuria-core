@@ -6,87 +6,72 @@ from groq import Groq
 
 # 1. Configuração da Página Web
 st.set_page_config(page_title="Karakuria AI", page_icon="🤖", layout="centered")
-st.title("🦇 Karakuria Core v2.0")
-st.caption("Sistema de Inteligência e Infraestrutura Operante (Módulo de Visão Ativo)")
+st.title("⚡ Karakuria Core v2.0")
+st.caption("Sistema de Inteligência e Infraestrutura Operante")
 
-# 2. Conexão com o Cofre e o Motor
+# 2. Conexão com o Cofre (Modo Robusto)
 load_dotenv()
-chave_secreta = os.getenv("GROQ_API_KEY")
-if chave_secreta:
-    cliente = Groq(api_key=chave_secreta.strip())
-    # --- DEBUG: LISTAGEM DE MODELOS ---
-lista_modelos = cliente.models.list()
-print("--- MODELOS DISPONÍVEIS NA GROQ ---")
-for m in lista_modelos.data:
-    if "vision" in m.id:
-        print(f"ENCONTRADO: {m.id}")
-# ----------------------------------
+chave_secreta = None
+
+if "GROQ_API_KEY" in st.secrets:
+    chave_secreta = st.secrets["GROQ_API_KEY"]
 else:
-    st.error("Erro crítico: Chave de API não encontrada.")
+    chave_secreta = os.getenv("GROQ_API_KEY")
+
+if not chave_secreta:
+    st.error("Erro crítico: Chave de API não configurada.")
     st.stop()
 
-# 3. Gerenciamento da Memória no Servidor
+cliente = Groq(api_key=chave_secreta.strip())
+
+# 3. Gerenciamento da Memória
 if "historico" not in st.session_state:
     st.session_state.historico = [
-        {"role": "system", "content": "Você é a Karakuria, uma assistente de infraestrutura e dados irônica, direta e altamente inteligente. Você também consegue ler e diagnosticar imagens."}
+        {"role": "system", "content": "Você é a Karakuria, uma assistente de infraestrutura e dados irônica e direta."}
     ]
 
-# 4. Renderização do Histórico
+# 4. Renderização
 for mensagem in st.session_state.historico:
     if mensagem["role"] != "system":
         with st.chat_message(mensagem["role"]):
             if isinstance(mensagem["content"], list):
                 st.markdown(mensagem["content"][0]["text"])
-                st.caption("📎 [Imagem processada nos logs]")
+                st.caption("📎 [Imagem processada]")
             else:
                 st.markdown(mensagem["content"])
 
-# 5. Interface de Input Híbrida
+# 5. Módulo de Sensores
 with st.sidebar:
     st.header("Módulo de Sensores")
-    imagem_anexada = st.file_uploader("Carregar captura de tela/log", type=["png", "jpg", "jpeg"])
-    if imagem_anexada:
-        st.image(imagem_anexada, caption="Pronto para análise.")
+    imagem_anexada = st.file_uploader("Upload", type=["png", "jpg", "jpeg"])
 
-comando = st.chat_input("Fale com a Karakuria ou envie uma imagem...")
+comando = st.chat_input("Fale com a Karakuria...")
 
 if comando:
-    # Mostra a mensagem do usuário na tela
     with st.chat_message("user"):
         st.markdown(comando)
 
-    # 6. O Roteamento de Dados (Texto vs. Imagem)
+    # 6. Lógica de Roteamento (Visão vs Texto)
     if imagem_anexada:
         bytes_imagem = imagem_anexada.getvalue()
         imagem_base64 = base64.b64encode(bytes_imagem).decode('utf-8')
-        tipo_arquivo = imagem_anexada.type 
-        
         conteudo_usuario = [
             {"type": "text", "text": comando},
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:{tipo_arquivo};base64,{imagem_base64}"}
-            }
+            {"type": "image_url", "image_url": {"url": f"data:{imagem_anexada.type};base64,{imagem_base64}"}}
         ]
-        
         st.session_state.historico.append({"role": "user", "content": conteudo_usuario})
-        # MOTOR ATUALIZADO AQUI:
-        motor_selecionado = "llama-3.2-11b-vision-instruct-turbo" 
-        
+        motor_selecionado = "llama-3.2-11b-vision-instruct" 
     else:
         st.session_state.historico.append({"role": "user", "content": comando})
-        motor_selecionado = "llama-3.2-90b-vision-preview"
+        motor_selecionado = "llama-3.1-8b-instant"
 
-    # 7. A Sinapse
-    with st.spinner(f"Processando via {motor_selecionado}..."):
+    # 7. Execução
+    with st.spinner("Processando..."):
         resposta = cliente.chat.completions.create(
             model=motor_selecionado,
             messages=st.session_state.historico
         )
-        
         conteudo_resposta = resposta.choices[0].message.content
-        
         with st.chat_message("assistant"):
             st.markdown(conteudo_resposta)
-        
         st.session_state.historico.append({"role": "assistant", "content": conteudo_resposta})
