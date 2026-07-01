@@ -72,7 +72,7 @@ if comando:
         with st.spinner(f"Analisando via {motor}..."):
             resposta = cliente.chat.completions.create(
                 model=motor,
-                messages=[{"role": "system", "content": "Você é a Karakuria, uma especialista em infraestrutura e programação. SEMPRE que for explicar arquiteturas, funcionamento de sistemas, fluxo de pacotes ou lógica de código, você DEVE ilustrar sua explicação desenhando diagramas detalhados usando arte ASCII dentro de blocos de código, além de usar tabelas para comparar dados."}] + st.session_state.historico
+                messages=[{"role": "system", "content": "Você é a Karakuria, uma especialista em infraestrutura e programação. QUANDO SOLICITADO pelo usuário, você deve ilustrar sua explicação desenhando diagramas detalhados usando arte ASCII dentro de blocos de código, além de usar tabelas para comparar dados."}] + st.session_state.historico
             )
             
             texto_resposta = resposta.choices[0].message.content
