@@ -4,16 +4,9 @@ import streamlit as st
 from dotenv import load_dotenv
 from groq import Groq
 
-<<<<<<< HEAD
-# 1. Configuração da Página Web
-st.set_page_config(page_title="Karakuria AI", page_icon="🤖", layout="centered")
-st.title("🕷️ Karakuria Core v2.0")
-st.caption("Assistente pessoal")
-=======
 # 1. Configuração do Ambiente
 st.set_page_config(page_title="Karakuria AI", page_icon="👁️", layout="centered")
 st.title("⚡ Karakuria Core v2.1 (Modo Visão)")
->>>>>>> 049f83f (Adiciona log de debug para validacao da chave API)
 
 load_dotenv()
 chave = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY")
@@ -22,6 +15,10 @@ if not chave:
     st.stop()
 
 cliente = Groq(api_key=chave.strip())
+
+# DEBUG SEGURO (NÃO REVELA A CHAVE)
+mascara = chave[:4] + "..." + chave[-4:] if len(chave) > 8 else "INVALIDA"
+print(f"DEBUG: Chave carregada na memória: {mascara}")
 
 # 2. Estado da Memória
 if "historico" not in st.session_state:
@@ -39,7 +36,6 @@ comando = st.chat_input("Pergunte algo sobre a imagem ou apenas converse...")
 # 4. Renderização
 for msg in st.session_state.historico:
     with st.chat_message(msg["role"]):
-        # Tratamento de exibição para texto ou listas (imagens)
         if isinstance(msg["content"], list):
             st.markdown(msg["content"][0]["text"])
         else:
@@ -51,15 +47,13 @@ if comando:
         st.markdown(comando)
         
     conteudo_envio = None
-    motor = "llama-3.1-8b-instant" # Padrão para texto
+    motor = "llama-3.1-8b-instant" 
 
     if imagem_anexada:
-        # Converter para Base64
         bytes_imagem = imagem_anexada.getvalue()
         base64_imagem = base64.b64encode(bytes_imagem).decode('utf-8')
         tipo_mime = imagem_anexada.type
         
-        # Estrutura do Pacote Visual (O "Olho" da IA)
         conteudo_envio = [
             {"type": "text", "text": comando},
             {
@@ -67,11 +61,10 @@ if comando:
                 "image_url": {"url": f"data:{tipo_mime};base64,{base64_imagem}"}
             }
         ]
-        motor = "llama-3.2-11b-vision-instruct" # Modelo de Visão
+        motor = "meta-llama/llama-4-scout-17b-16e-instruct"
     else:
         conteudo_envio = comando
 
-    # Salvar no histórico
     st.session_state.historico.append({"role": "user", "content": conteudo_envio})
 
     # 6. Execução com Tratamento de Erro (O "SysAdmin Debug")
