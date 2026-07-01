@@ -4,74 +4,87 @@ import streamlit as st
 from dotenv import load_dotenv
 from groq import Groq
 
+<<<<<<< HEAD
 # 1. Configuração da Página Web
 st.set_page_config(page_title="Karakuria AI", page_icon="🤖", layout="centered")
 st.title("🕷️ Karakuria Core v2.0")
 st.caption("Assistente pessoal")
+=======
+# 1. Configuração do Ambiente
+st.set_page_config(page_title="Karakuria AI", page_icon="👁️", layout="centered")
+st.title("⚡ Karakuria Core v2.1 (Modo Visão)")
+>>>>>>> 049f83f (Adiciona log de debug para validacao da chave API)
 
-# 2. Conexão com o Cofre (Modo Robusto)
 load_dotenv()
-chave_secreta = None
-
-if "GROQ_API_KEY" in st.secrets:
-    chave_secreta = st.secrets["GROQ_API_KEY"]
-else:
-    chave_secreta = os.getenv("GROQ_API_KEY")
-
-if not chave_secreta:
-    st.error("Erro crítico: Chave de API não configurada.")
+chave = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY")
+if not chave:
+    st.error("Chave de API não encontrada.")
     st.stop()
 
-cliente = Groq(api_key=chave_secreta.strip())
+cliente = Groq(api_key=chave.strip())
 
-# 3. Gerenciamento da Memória
+# 2. Estado da Memória
 if "historico" not in st.session_state:
-    st.session_state.historico = [
-        {"role": "system", "content": "Você é a Karakuria, uma assistente de infraestrutura e dados irônica e direta."}
-    ]
+    st.session_state.historico = []
+
+# 3. Módulo de Sensores (Upload)
+with st.sidebar:
+    st.header("Sensor de Imagem")
+    imagem_anexada = st.file_uploader("Upload", type=["png", "jpg", "jpeg"])
+    if imagem_anexada:
+        st.image(imagem_anexada, caption="Imagem carregada")
+
+comando = st.chat_input("Pergunte algo sobre a imagem ou apenas converse...")
 
 # 4. Renderização
-for mensagem in st.session_state.historico:
-    if mensagem["role"] != "system":
-        with st.chat_message(mensagem["role"]):
-            if isinstance(mensagem["content"], list):
-                st.markdown(mensagem["content"][0]["text"])
-                st.caption("📎 [Imagem processada]")
-            else:
-                st.markdown(mensagem["content"])
+for msg in st.session_state.historico:
+    with st.chat_message(msg["role"]):
+        # Tratamento de exibição para texto ou listas (imagens)
+        if isinstance(msg["content"], list):
+            st.markdown(msg["content"][0]["text"])
+        else:
+            st.markdown(msg["content"])
 
-# 5. Módulo de Sensores
-with st.sidebar:
-    st.header("Módulo de Sensores")
-    imagem_anexada = st.file_uploader("Upload", type=["png", "jpg", "jpeg"])
-
-comando = st.chat_input("Fale com a Karakuria...")
-
+# 5. Lógica de Roteamento Visual
 if comando:
     with st.chat_message("user"):
         st.markdown(comando)
+        
+    conteudo_envio = None
+    motor = "llama-3.1-8b-instant" # Padrão para texto
 
-    # 6. Lógica de Roteamento (Visão vs Texto)
     if imagem_anexada:
+        # Converter para Base64
         bytes_imagem = imagem_anexada.getvalue()
-        imagem_base64 = base64.b64encode(bytes_imagem).decode('utf-8')
-        conteudo_usuario = [
+        base64_imagem = base64.b64encode(bytes_imagem).decode('utf-8')
+        tipo_mime = imagem_anexada.type
+        
+        # Estrutura do Pacote Visual (O "Olho" da IA)
+        conteudo_envio = [
             {"type": "text", "text": comando},
-            {"type": "image_url", "image_url": {"url": f"data:{imagem_anexada.type};base64,{imagem_base64}"}}
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:{tipo_mime};base64,{base64_imagem}"}
+            }
         ]
-        st.session_state.historico.append({"role": "user", "content": conteudo_usuario})
-        motor_selecionado = "llama-3.2-11b-vision-instruct" 
+        motor = "llama-3.2-11b-vision-instruct" # Modelo de Visão
     else:
-        st.session_state.historico.append({"role": "user", "content": comando})
-        motor_selecionado = "llama-3.1-8b-instant"
+        conteudo_envio = comando
 
-    # 7. Execução
-    with st.spinner("Processando..."):
-        resposta = cliente.chat.completions.create(
-            model=motor_selecionado,
-            messages=st.session_state.historico
-        )
-        conteudo_resposta = resposta.choices[0].message.content
-        with st.chat_message("assistant"):
-            st.markdown(conteudo_resposta)
-        st.session_state.historico.append({"role": "assistant", "content": conteudo_resposta})
+    # Salvar no histórico
+    st.session_state.historico.append({"role": "user", "content": conteudo_envio})
+
+    # 6. Execução com Tratamento de Erro (O "SysAdmin Debug")
+    try:
+        with st.spinner(f"Analisando via {motor}..."):
+            resposta = cliente.chat.completions.create(
+                model=motor,
+                messages=[{"role": "system", "content": "Você é um especialista em infraestrutura."}] + st.session_state.historico
+            )
+            
+            texto_resposta = resposta.choices[0].message.content
+            st.session_state.historico.append({"role": "assistant", "content": texto_resposta})
+            st.rerun()
+            
+    except Exception as e:
+        st.error(f"Falha na comunicação com o motor: {e}")
