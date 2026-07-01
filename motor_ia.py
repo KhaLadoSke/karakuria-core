@@ -6,7 +6,7 @@ from groq import Groq
 
 # 1. Configuração do Ambiente
 st.set_page_config(page_title="Karakuria AI", page_icon="👁️", layout="centered")
-st.title("⚡ Karakuria Core v2.1 (Modo Visão)")
+st.title("🦇 Karakuria Core v2.1")
 
 load_dotenv()
 chave = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY")
