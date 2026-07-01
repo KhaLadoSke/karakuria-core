@@ -6,8 +6,8 @@ from groq import Groq
 
 # 1. Configuração da Página Web
 st.set_page_config(page_title="Karakuria AI", page_icon="🤖", layout="centered")
-st.title("🦇 Karakuria Core v2.0")
-st.caption("Sistema de Inteligência e Infraestrutura Operante")
+st.title("🕷️ Karakuria Core v2.0")
+st.caption("Assistente pessoal")
 
 # 2. Conexão com o Cofre (Modo Robusto)
 load_dotenv()
